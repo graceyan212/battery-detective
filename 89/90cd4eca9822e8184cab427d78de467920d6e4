@@ -1,0 +1,51 @@
+battery_detective/storage/database.py
+  s_4d668f42021c71::t_f936f0f665537b 1-130
+battery_detective/storage/schema.sql
+  s_4d668f42021c71::t_f936f0f665537b 1-60
+tests/test_sampler.py
+  s_4d668f42021c71::t_1b71fd7bc52739 1-30
+battery_detective/collector/sampler.py
+  s_4d668f42021c71::t_f936f0f665537b 1-61
+battery_detective/collector/processes.py
+  s_4d668f42021c71::t_f936f0f665537b 1-73
+tests/test_processes.py
+  s_4d668f42021c71::t_1b71fd7bc52739 1-51
+.gitignore
+  s_4d668f42021c71::t_b1f92758635ea9 1-12
+battery_detective/collector/__init__.py
+  s_4d668f42021c71::t_f936f0f665537b 1
+pyproject.toml
+  s_4d668f42021c71::t_b1f92758635ea9 1-26
+tests/test_storage.py
+  s_4d668f42021c71::t_1b71fd7bc52739 1-66
+requirements.txt
+  s_4d668f42021c71::t_b1f92758635ea9 1-2
+battery_detective/collector/foreground.py
+  s_4d668f42021c71::t_f936f0f665537b 1-19
+docs/superpowers/plans/2026-10-19-battery-detective.md
+  s_4d668f42021c71::t_b1f92758635ea9 1-95
+battery_detective/__init__.py
+  s_4d668f42021c71::t_f936f0f665537b 1-3
+battery_detective/storage/__init__.py
+  s_4d668f42021c71::t_f936f0f665537b 1
+battery_detective/collector/battery.py
+  s_4d668f42021c71::t_f936f0f665537b 1-38
+docs/engineering-brief.md
+  s_4d668f42021c71::t_0ba218bd5beebe 1-415
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8990cd4eca9822e8184cab427d78de467920d6e4",
+  "prompts": {},
+  "sessions": {
+    "s_4d668f42021c71": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1568e-9a52-7251-9a25-c79ddb16a40d",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "graceyan212 <64806792+graceyan212@users.noreply.github.com>"
+    }
+  }
+}
