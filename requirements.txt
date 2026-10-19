@@ -1,0 +1,2 @@
+psutil>=6.1,<8
+pyobjc-framework-Cocoa>=10.3,<13; sys_platform == 'darwin'
