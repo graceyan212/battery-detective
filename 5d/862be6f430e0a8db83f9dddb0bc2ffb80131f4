@@ -1,0 +1,33 @@
+battery_detective/analysis/__init__.py
+  s_4d668f42021c71::t_613fd200dc8c93 1
+battery_detective/analysis/discharge.py
+  s_4d668f42021c71::t_613fd200dc8c93 1-65
+tests/test_analysis.py
+  s_4d668f42021c71::t_cefa27915b877e 1-83
+battery_detective/analysis/anomalies.py
+  s_4d668f42021c71::t_613fd200dc8c93 1-25
+battery_detective/analysis/investigation.py
+  s_4d668f42021c71::t_613fd200dc8c93 1-98
+battery_detective/reports/generator.py
+  s_4d668f42021c71::t_613fd200dc8c93 1-39
+tests/test_reports.py
+  s_4d668f42021c71::t_cefa27915b877e 1-43
+battery_detective/reports/__init__.py
+  s_4d668f42021c71::t_613fd200dc8c93 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5d862be6f430e0a8db83f9dddb0bc2ffb80131f4",
+  "prompts": {},
+  "sessions": {
+    "s_4d668f42021c71": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1568e-9a52-7251-9a25-c79ddb16a40d",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "graceyan212 <64806792+graceyan212@users.noreply.github.com>"
+    }
+  }
+}
