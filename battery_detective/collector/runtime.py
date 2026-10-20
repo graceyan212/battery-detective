@@ -62,7 +62,7 @@ def run_collector(database, interval=60, count=None, retention_days=7):
             session = store.start_session(interval)
             sampler = Sampler(store, session, interval)
             successes = errors = 0
-            last_prune = 0
+            next_prune = 0
             logger.info("Collector started; interval=%ss", interval)
             print(f"Collecting every {interval}s into {store.path}", flush=True)
             try:
@@ -72,14 +72,6 @@ def run_collector(database, interval=60, count=None, retention_days=7):
                         sample_id = sampler.sample()
                         successes += 1
                         errors = 0
-                        now = time.time()
-                        if now - last_prune >= 86400:
-                            store.prune(now-retention_days*86400)
-                            last_prune = now
-                        if successes % 15 == 0:
-                            rows = store.samples(now-3600, now)
-                            store.save_anomalies(now-3600, now, detect_anomalies(rows))
-                        logger.info("Sample %s: %.1f ms including storage", sample_id, (time.monotonic()-tick)*1000)
                     except (OSError, sqlite3.Error, RuntimeError) as exc:
                         errors += 1
                         logger.exception("Sampling failed (%s/3): %s", errors, type(exc).__name__)
@@ -87,6 +79,23 @@ def run_collector(database, interval=60, count=None, retention_days=7):
                         sampler = Sampler(store, session, interval)
                         if errors >= 3:
                             raise
+                    else:
+                        # Retention and derived caches must never invalidate a committed sample.
+                        now = time.time()
+                        if now >= next_prune:
+                            next_prune = now + 86400
+                            try:
+                                store.prune(now-retention_days*86400)
+                            except (OSError, sqlite3.Error, RuntimeError):
+                                next_prune = now + 3600
+                                logger.exception("Retention failed; keeping collection active and retrying in one hour")
+                        if successes % 15 == 0:
+                            try:
+                                rows = store.samples(now-3600, now)
+                                store.save_anomalies(now-3600, now, detect_anomalies(rows))
+                            except (OSError, sqlite3.Error, RuntimeError):
+                                logger.exception("Anomaly cache refresh failed; collection remains active")
+                        logger.info("Sample %s: %.1f ms including storage", sample_id, (time.monotonic()-tick)*1000)
                     if count is not None and successes >= count:
                         break
                     # Relative sleep does not wake a sleeping Mac and never backfills missed ticks.

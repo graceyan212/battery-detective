@@ -25,10 +25,12 @@ function svg(tag, attrs = {}, text) {
 function localInput(ts) {
   const date = new Date(ts * 1000);
   const shifted = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return shifted.toISOString().slice(0, 16);
+  return shifted.toISOString().slice(0, 19);
 }
 
-function inputTime(id) {
+function inputTime(id, original) {
+  // Keep sub-second sample boundaries when the displayed input was not edited.
+  if (original != null && $(id).value === localInput(original)) return original;
   const timestamp = new Date($(id).value).getTime() / 1000;
   if (!Number.isFinite(timestamp)) throw new Error("Choose both a start and end time.");
   return timestamp;
@@ -43,7 +45,7 @@ async function api(route, params) {
   const query = params ? "?" + new URLSearchParams(params) : "";
   const response = await fetch("/api/" + route + query, {cache: "no-store"});
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error || "Could not read measurements. Refresh to retry.");
+  if (!response.ok || data.error) throw new Error(data.error || "Could not read measurements. Refresh to retry.");
   return data;
 }
 
@@ -175,7 +177,8 @@ function renderInvestigation(data) {
   evidence.append(element("p",report.baseline.rate == null ? "No qualifying discharge baseline in the preceding window." : `Preceding window: ${number(report.baseline.rate)} pp/h. Workloads are not matched.`));
   if (report.cpu_change != null) evidence.append(element("p",`System CPU changed by ${report.cpu_change>=0?"+":""}${number(report.cpu_change)} percentage points.`));
   const facts=element("ul");
-  for (const fact of report.observations.slice(1,4)) {
+  const supportingFacts = report.observations.filter(fact => fact.id === "C1" || fact.id.startsWith(report.contributors.length ? "D" : "P"));
+  for (const fact of supportingFacts.slice(0,4)) {
     const li=element("li"); li.append(element("span",`[${fact.id}] `,"evidence-ref"),document.createTextNode(fact.text)); facts.append(li);
   }
   evidence.append(facts,element("h4","Potential explanations"));
@@ -188,10 +191,21 @@ function renderInvestigation(data) {
   limits.append(list); evidence.append(limits);
 }
 
+function clearInvestigation(message) {
+  state.report = null;
+  $("download-report").disabled = true;
+  $("evidence").replaceChildren(element("p", message, "quiet"));
+  const row = element("tr"), cell = element("td", message);
+  cell.colSpan = 4; row.append(cell);
+  $("process-table").replaceChildren(row);
+  $("foreground-list").replaceChildren();
+}
+
 async function investigateSelection() {
   if (!state.selection) return;
   const generation=++state.investigationGeneration;
   const [start,end]=state.selection;
+  clearInvestigation("Reading measurements for this selection…");
   $("selection-label").textContent="Analyzing…";
   $("download-report").disabled=true;
   try {
@@ -200,7 +214,7 @@ async function investigateSelection() {
     renderInvestigation(data);
     $("selection-label").textContent=`${Math.round((end-start)/60)} min · ${data.investigation.sample_count} samples`;
     error("");
-  } catch (err) { if (generation===state.investigationGeneration) { error(err.message); $("selection-label").textContent="Could not analyze this window"; } }
+  } catch (err) { if (generation===state.investigationGeneration) { clearInvestigation("This selection could not be analyzed. Refresh to retry."); error(err.message); $("selection-label").textContent="Could not analyze this window"; } }
 }
 
 function renderAnomalies() {
@@ -218,6 +232,11 @@ async function loadWindow() {
   const generation=++state.generation;
   ++state.investigationGeneration;
   $("refresh").disabled=true;
+  clearInvestigation("Loading measurements…");
+  $("chart-panel").hidden=true;
+  for (const id of ["battery-reading", "rate-reading", "cpu-reading", "coverage-reading"]) $(id).textContent="—";
+  $("sample-reading").textContent="Reading history";
+  error("");
   try {
     const requestedThreshold=threshold();
     const status=await api("status");
@@ -264,7 +283,6 @@ async function loadWindow() {
       setSelection(...selection); drawChart();
       await investigateSelection();
     }
-    error("");
   } catch (err) { if (generation===state.generation) error(err.message); }
   finally { if (generation===state.generation) $("refresh").disabled=false; }
 }
@@ -277,8 +295,8 @@ for (const button of document.querySelectorAll("[data-preset]")) {
     if (state.preset!=="custom") loadWindow();
   });
 }
-$("custom-range").addEventListener("submit",event=>{event.preventDefault();try {state.start=inputTime("window-start");state.end=inputTime("window-end");loadWindow();}catch(err){error(err.message);}});
-$("investigate-form").addEventListener("submit",event=>{event.preventDefault();try {const start=inputTime("selection-start"),end=inputTime("selection-end");if(end<=start)throw new Error("Choose an end time after the start time.");setSelection(start,end);investigateSelection();}catch(err){error(err.message);}});
+$("custom-range").addEventListener("submit",event=>{event.preventDefault();try {state.start=inputTime("window-start",state.start);state.end=inputTime("window-end",state.end);loadWindow();}catch(err){error(err.message);}});
+$("investigate-form").addEventListener("submit",event=>{event.preventDefault();try {const start=inputTime("selection-start",state.selection?.[0]),end=inputTime("selection-end",state.selection?.[1]);if(end<=start)throw new Error("Choose an end time after the start time.");setSelection(start,end);investigateSelection();}catch(err){error(err.message);}});
 $("refresh").addEventListener("click",loadWindow);
 $("threshold").addEventListener("change",loadWindow);
 $("latest-window").addEventListener("click",()=>{state.preset="custom";state.end=state.status.latest;state.start=Math.max(state.status.first,state.end-6*3600);if(state.start===state.end)state.start-=60;$("custom-range").hidden=false;document.querySelectorAll("[data-preset]").forEach(node=>{const active=node.dataset.preset==="custom";node.classList.toggle("selected",active);node.setAttribute("aria-pressed",String(active));});loadWindow();});
@@ -299,4 +317,5 @@ $("timeline-chart").addEventListener("pointermove",event=>{if(dragStart==null)re
 $("timeline-chart").addEventListener("pointerup",event=>{if(dragStart==null)return;const end=pointerTime(event);if(end!==dragStart){setSelection(Math.min(dragStart,end),Math.max(dragStart,end));investigateSelection();}dragStart=null;});
 $("timeline-chart").addEventListener("pointercancel",()=>{dragStart=null;});
 $("chart-timezone").textContent=Intl.DateTimeFormat().resolvedOptions().timeZone;
+document.querySelectorAll('input[type="datetime-local"]').forEach(input => { input.step = "1"; });
 loadWindow();

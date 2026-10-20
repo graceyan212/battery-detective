@@ -41,3 +41,36 @@ def test_no_rate_with_only_charging_data(tmp_path):
             store.add_sample(session, {"timestamp": i*60, "monotonic": i*60,
                                       "battery_percent": 50+i, "plugged": True}, [], {})
         assert investigate(store, 0, 1200)["discharge"]["rate"] is None
+
+
+def test_plugged_only_cpu_cannot_rank_as_a_discharge_contributor(tmp_path):
+    with Store(tmp_path / "db") as store:
+        session = store.start_session(60, "live", 0)
+        for i in range(61):
+            plugged = i > 30
+            store.add_sample(session, {
+                "timestamp": i*60, "monotonic": i*60, "elapsed_seconds": 60 if i else None,
+                "battery_percent": 80-i/3 if not plugged else 70,
+                "plugged": plugged,
+            }, [
+                {"pid": 1, "started": 1, "name": "unplugged-worker", "cpu_seconds": 12 if not plugged and i else 0, "cpu_percent": 20},
+                {"pid": 2, "started": 1, "name": "plugged-worker", "cpu_seconds": 300 if plugged else 0, "cpu_percent": 500 if plugged else 0},
+            ], {})
+        report = investigate(store, 0, 3600)
+    assert report["processes"][0]["name"] == "plugged-worker"  # Whole-window activity remains visible.
+    assert report["contributors"][0]["name"] == "unplugged-worker"
+    assert report["contributors"][0]["cpu_seconds"] == 360
+    assert all("plugged-worker" not in item["text"].replace("unplugged-worker", "") for item in report["hypotheses"])
+    assert "unplugged-worker" in report["experiments"][0]
+
+
+def test_unknown_process_cpu_is_not_used_as_evidence(tmp_path):
+    with Store(tmp_path / "db") as store:
+        session = store.start_session(60, "live", 0)
+        for i in range(31):
+            store.add_sample(session, {"timestamp": i*60, "monotonic": i*60,
+                                      "elapsed_seconds": 60 if i else None,
+                                      "battery_percent": 80-i/3, "plugged": False},
+                             [{"pid": 1,"started": 1,"name": "unknown","cpu_seconds": None}], {})
+        report = investigate(store, 0, 1800)
+    assert report["hypotheses"] == []

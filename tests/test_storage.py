@@ -64,3 +64,28 @@ def test_read_only_connection_cannot_modify(tmp_path):
     with Store(db, readonly=True) as store:
         with pytest.raises(sqlite3.OperationalError):
             store.start_session(60, "live", 0)
+
+
+def test_status_is_consistent_when_another_connection_prunes(tmp_path, monkeypatch):
+    db = tmp_path / "db"
+    with Store(db) as writer, Store(db, readonly=True) as reader:
+        session = writer.start_session(60, "live", 0)
+        writer.add_sample(session, sample(60), [], {})
+        original_samples = reader.samples
+
+        def prune_during_status(start, end):
+            writer.prune(100)
+            return original_samples(start, end)
+
+        monkeypatch.setattr(reader, "samples", prune_during_status)
+        result = reader.status()
+        assert result["samples"] == 1
+        assert result["latest_sample"]["timestamp"] == 60
+        assert writer.status()["samples"] == 0
+
+
+def test_zero_epoch_is_a_real_sample_timestamp(tmp_path):
+    with Store(tmp_path / "db") as store:
+        session = store.start_session(60, "synthetic", 0)
+        store.add_sample(session, sample(0), [], {})
+        assert store.status()["latest_sample"]["timestamp"] == 0

@@ -20,6 +20,10 @@ def detect_anomalies(samples, threshold=12):
                 else:
                     windows.append([left, right])
         for left, right in windows:
-            anomalies.append({**summarize_run([run[left], run[right]]), "threshold": threshold,
-                              "reason": "Sustained discharge at or above the configured threshold."})
+            summary = summarize_run([run[left], run[right]])
+            # Overlapping windows can all contain the same rounded percentage drop.
+            # Their union must itself meet the threshold before we call it sustained.
+            if summary["rate"] is not None and summary["rate"] >= threshold:
+                anomalies.append({**summary, "threshold": threshold,
+                                  "reason": "Sustained discharge at or above the configured threshold."})
     return anomalies

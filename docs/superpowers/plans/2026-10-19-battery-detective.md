@@ -42,11 +42,11 @@
 
 **Interfaces:** `ProcessTracker.update(observations, elapsed) -> list[dict]`; `Store(path, readonly=False)` with `start_session`, `add_sample`, `samples`, `top_processes`, `prune`; `Sampler.sample() -> sample id`.
 
-- [ ] Write tests for PID reuse, process disappearance, counter resets, gap detection, atomic storage, indexed window queries, and pruning.
-- [ ] Run tests and observe missing behavior.
-- [ ] Implement cumulative deltas, wall/monotonic continuity, nullable sensors, atomic batched writes, sessions, and restricted file permissions.
-- [ ] Run `python -m pytest tests/test_processes.py tests/test_storage.py tests/test_sampler.py -q`; expect all passing.
-- [ ] Commit the tested collector/storage implementation.
+- [x] Write tests for PID reuse, process disappearance, counter resets, gap detection, atomic storage, indexed window queries, and pruning.
+- [x] Run tests and observe missing behavior.
+- [x] Implement cumulative deltas, wall/monotonic continuity, nullable sensors, atomic batched writes, sessions, and restricted file permissions.
+- [x] Run `python -m pytest tests/test_processes.py tests/test_storage.py tests/test_sampler.py -q`; expect all passing.
+- [x] Commit the tested collector/storage implementation.
 
 ## Task 2: Discharge, anomalies, and reports
 
@@ -54,11 +54,11 @@
 
 **Interfaces:** `discharge_segments(samples) -> list[dict]`; `detect_anomalies(samples, threshold=12) -> list[dict]`; `investigate(store, start, end) -> dict`; `render_report(investigation) -> str`.
 
-- [ ] Write tests for stable discharge, charging transitions, quantization, sleeps, missing sensors, sessions, baseline absence, and selected-window clipping.
-- [ ] Run the tests and observe missing behavior.
-- [ ] Implement continuity-aware rates, rolling threshold windows, evidence-linked observations and hypotheses, and five-section deterministic reports.
-- [ ] Run `python -m pytest -q`; expect all passing.
-- [ ] Commit the tested analysis and reports.
+- [x] Write tests for stable discharge, charging transitions, quantization, sleeps, missing sensors, sessions, baseline absence, and selected-window clipping.
+- [x] Run the tests and observe missing behavior.
+- [x] Implement continuity-aware rates, rolling threshold windows, evidence-linked observations and hypotheses, and five-section deterministic reports.
+- [x] Run `python -m pytest -q`; expect all passing.
+- [x] Commit the tested analysis and reports.
 
 ## Task 3: Commands and background lifecycle
 
@@ -66,11 +66,11 @@
 
 **Interfaces:** `python -m battery_detective {collect,dashboard,demo,report,prune,agent}`. Collector locks canonical database path; signal handlers stop gracefully. Agent operations use a generated user plist and launchctl.
 
-- [ ] Write tests for duplicate exclusion, restart/release, argument validation, plist paths containing spaces, and synthetic data isolation.
-- [ ] Run tests and observe missing behavior.
-- [ ] Implement CLI, bounded error retries, daily retention, opt-in launchctl commands, logging, and a clearly labeled deterministic demo dataset.
-- [ ] Run `python -m pytest -q`; expect all passing.
-- [ ] Commit the tested runtime.
+- [x] Write tests for duplicate exclusion, restart/release, argument validation, plist paths containing spaces, and synthetic data isolation.
+- [x] Run tests and observe missing behavior.
+- [x] Implement CLI, bounded error retries, daily retention, opt-in launchctl commands, logging, and a clearly labeled deterministic demo dataset.
+- [x] Run `python -m pytest -q`; expect all passing.
+- [x] Commit the tested runtime.
 
 ## Task 4: Local dashboard
 
@@ -78,18 +78,18 @@
 
 **Interfaces:** Read-only GET `/api/timeline?start=&end=` and `/api/investigate?start=&end=`; loopback-only listener; `/api/status` for database coverage and provenance.
 
-- [ ] Write HTTP tests for empty data, range validation, actual persisted samples, malicious origins/hosts, and read-only behavior.
-- [ ] Run tests and observe missing behavior.
-- [ ] Implement accessible responsive charts, preset/custom windows, interval selection, process table, and evidence/report panel.
-- [ ] Run all tests and verify real and demo data in Brave, including mobile layout and empty states.
-- [ ] Commit the tested dashboard.
+- [x] Write HTTP tests for empty data, range validation, actual persisted samples, malicious origins/hosts, and read-only behavior.
+- [x] Run tests and observe missing behavior.
+- [x] Implement accessible responsive charts, preset/custom windows, interval selection, process table, and evidence/report panel.
+- [x] Run all tests and verify real and demo data in Brave, including mobile layout and empty states.
+- [x] Commit the tested dashboard.
 
 ## Task 5: Real validation and handoff
 
 **Files:** `README.md`, `docs/validation.md`, `examples/synthetic-investigation.md`.
 
-- [ ] Run a real non-root collector and inspect SQLite rows, process deltas, sensor limitations, and sampling overhead.
-- [ ] Exercise graceful shutdown and duplicate collector exclusion; inspect generated LaunchAgent without installing it.
-- [ ] Generate a synthetic report, run the full suite, compile Python files, and inspect the dashboard visually.
-- [ ] Request one independent whole-branch review under the executing-plans skill, address substantive findings, and rerun affected checks.
-- [ ] Document setup, startup, architecture, measurements versus estimates, overhead, limitations, and follow-up soak testing; commit final deliverables.
+- [x] Run a real non-root collector and inspect SQLite rows, process deltas, sensor limitations, and sampling overhead.
+- [x] Exercise graceful shutdown and duplicate collector exclusion; inspect generated LaunchAgent without installing it.
+- [x] Generate a synthetic report, run the full suite, compile Python files, and inspect the dashboard visually.
+- [x] Request one independent whole-branch review under the executing-plans skill, address substantive findings, and rerun affected checks.
+- [x] Document setup, startup, architecture, measurements versus estimates, overhead, limitations, and follow-up soak testing; commit final deliverables.

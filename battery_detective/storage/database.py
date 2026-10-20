@@ -98,6 +98,7 @@ class Store:
             """SELECT p.pid, p.started, p.name, p.app_name, p.bundle_id, s.session_id,
                       SUM(p.cpu_seconds) AS cpu_seconds,
                       100.0*SUM(p.cpu_seconds)/SUM(s.elapsed_seconds) AS cpu_percent,
+                      SUM(s.elapsed_seconds) AS observed_seconds,
                       MAX(p.cpu_percent) AS peak_cpu_percent, MAX(p.rss) AS peak_rss,
                       COUNT(*) AS observations,
                       SUM(CASE WHEN f.pid IS NOT NULL AND f.pid != p.pid THEN 1 ELSE 0 END) AS background_observations
@@ -110,11 +111,18 @@ class Store:
                ORDER BY cpu_seconds DESC LIMIT ?""", (start, end, start, limit))]
 
     def status(self):
-        result = dict(self.conn.execute(
-            "SELECT COUNT(*) AS samples, MIN(timestamp) AS first, MAX(timestamp) AS latest FROM samples").fetchone())
-        result["sources"] = [row[0] for row in self.conn.execute("SELECT DISTINCT source FROM sessions")]
-        result["latest_sample"] = self.samples(result["latest"], result["latest"])[-1] if result["latest"] else None
-        return result
+        own_snapshot = not self.conn.in_transaction
+        if own_snapshot:
+            self.conn.execute("BEGIN")
+        try:
+            result = dict(self.conn.execute(
+                "SELECT COUNT(*) AS samples, MIN(timestamp) AS first, MAX(timestamp) AS latest FROM samples").fetchone())
+            result["sources"] = [row[0] for row in self.conn.execute("SELECT DISTINCT source FROM sessions")]
+            result["latest_sample"] = self.samples(result["latest"], result["latest"])[-1] if result["latest"] is not None else None
+            return result
+        finally:
+            if own_snapshot:
+                self.conn.rollback()
 
     def save_anomalies(self, start, end, anomalies, threshold=12):
         with self.conn:

@@ -25,6 +25,25 @@ def mean_cpu(samples):
     return numerator / duration if duration else None
 
 
+def discharge_contributors(store, segments):
+    combined = {}
+    for segment in segments:
+        if segment["rate"] is None:
+            continue
+        for row in store.top_processes(segment["start"], segment["end"], limit=-1):
+            key = (row["session_id"], row["pid"], row["started"], row["name"], row["bundle_id"])
+            if key not in combined:
+                combined[key] = row
+                continue
+            prior = combined[key]
+            for field in ("cpu_seconds", "observed_seconds", "observations", "background_observations"):
+                prior[field] += row[field]
+    ranked = sorted(combined.values(), key=lambda row: -row["cpu_seconds"])
+    for row in ranked:
+        row["cpu_percent"] = 100 * row["cpu_seconds"] / row["observed_seconds"]
+    return [row for row in ranked if row["cpu_seconds"] > 0][:5]
+
+
 def investigate(store, start, end, threshold=12):
     validate_window(start, end)
     rows = store.samples(start, end)
@@ -33,6 +52,7 @@ def investigate(store, start, end, threshold=12):
     baseline = discharge_summary(previous)
     current_cpu, previous_cpu = mean_cpu(rows), mean_cpu(previous)
     processes = store.top_processes(start, end)
+    contributors = discharge_contributors(store, discharge["segments"])
     issues = Counter()
     covered = 0
     for left, right in zip(rows, rows[1:]):
@@ -60,12 +80,14 @@ def investigate(store, start, end, threshold=12):
     for index, process in enumerate(processes[:5], 1):
         evidence_id = f"P{index}"
         facts.append({"id": evidence_id, "text": f"{process['name']} (PID {process['pid']}) recorded {process['cpu_seconds']:.1f} CPU seconds; {process['cpu_percent']:.1f}% mean CPU on a one-core scale during observed intervals."})
-        if discharge["rate"] is not None and process["cpu_seconds"] > 0:
-            hypotheses.append({"rank": len(hypotheses)+1,
-                               "text": f"CPU work by {process['name']} may have contributed to drain during this window. This is a correlation, not an attribution of battery energy.",
-                               "evidence": ["B1", evidence_id], "confidence": "Unconfirmed"})
+    for index, process in enumerate(contributors, 1):
+        evidence_id = f"D{index}"
+        facts.append({"id": evidence_id, "text": f"During qualifying unplugged intervals, {process['name']} (PID {process['pid']}) recorded {process['cpu_seconds']:.1f} CPU seconds; {process['cpu_percent']:.1f}% mean CPU on a one-core scale."})
+        hypotheses.append({"rank": index,
+                           "text": f"CPU work by {process['name']} may have contributed to drain during the qualifying unplugged intervals. This is a correlation, not an attribution of battery energy.",
+                           "evidence": ["B1", evidence_id], "confidence": "Unconfirmed"})
     if hypotheses:
-        experiments.append(f"Repeat a comparable unplugged workload with {processes[0]['name']} idle, keeping screen brightness and network conditions similar, then compare at least 15 minutes of discharge.")
+        experiments.append(f"Repeat a comparable unplugged workload with {contributors[0]['name']} idle, keeping screen brightness and network conditions similar, then compare at least 15 minutes of discharge.")
     experiments.append("Collect a longer uninterrupted unplugged window and compare similar workloads before drawing conclusions.")
     limits = [
         "Battery percentage is rounded; discharge rates are estimates of percentage points per hour, not instantaneous power.",
@@ -73,6 +95,7 @@ def investigate(store, start, end, threshold=12):
         "Foreground identity is sampled at each observation; app switches and processes that start and exit between samples can be missed.",
         "Brief power transitions between samples and clock changes indistinguishable from sleep cannot be reconstructed.",
         "Process CPU percentages use one logical core (and may exceed 100%); system CPU uses total machine capacity.",
+        "The process table covers the whole selected window; contributor evidence uses only complete process intervals within qualifying unplugged discharge segments.",
     ]
     if not rows:
         limits.insert(0, "No measurements in this window. Run the collector or choose a recorded time range.")
@@ -92,7 +115,7 @@ def investigate(store, start, end, threshold=12):
             "discharge": discharge, "baseline": {"rate": baseline["rate"], "start": start-(end-start), "end": start},
             "system_cpu": current_cpu, "previous_system_cpu": previous_cpu,
             "cpu_change": current_cpu-previous_cpu if current_cpu is not None and previous_cpu is not None else None,
-            "processes": processes, "foreground": sorted(foreground.values(), key=lambda item: -item["observations"]),
+            "processes": processes, "contributors": contributors, "foreground": sorted(foreground.values(), key=lambda item: -item["observations"]),
             "anomalies": detect_anomalies(rows, threshold), "observations": facts, "hypotheses": hypotheses,
             "limitations": limits, "experiments": experiments,
             "quality": {"covered_seconds": covered, "unobserved_seconds": max(0, end-start-covered), "issues": dict(issues), "inaccessible_processes": denied}}

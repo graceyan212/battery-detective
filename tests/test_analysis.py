@@ -81,3 +81,10 @@ def test_threshold_and_minimum_duration_apply():
 
 def test_quantized_plateau_still_has_valid_zero_loss_segment():
     assert discharge_segments(series(rate=0))[0]["loss"] == 0
+
+
+def test_single_quantized_drop_cannot_inflate_a_sustained_anomaly():
+    rows = series(40, 0)
+    for i, row in enumerate(rows):
+        row["battery_percent"] = 90 if i < 14 else 87
+    assert detect_anomalies(rows) == []
