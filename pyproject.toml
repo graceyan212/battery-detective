@@ -10,8 +10,9 @@ requires-python = ">=3.11"
 dependencies = ["psutil>=6.1,<8", "pyobjc-framework-Cocoa>=10.3,<13; sys_platform == 'darwin'"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8,<10"]
+dev = ["pytest>=8,<10", "Flask>=3.1,<4"]
 ui = ["playwright>=1.50,<2"]
+share = ["Flask>=3.1,<4"]
 
 [project.scripts]
 battery-detective = "battery_detective.cli:main"

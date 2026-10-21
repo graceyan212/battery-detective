@@ -10,3 +10,6 @@ dist/
 *.sqlite*
 *.db*
 .DS_Store
+.vercel/
+.env*
+!.env.example

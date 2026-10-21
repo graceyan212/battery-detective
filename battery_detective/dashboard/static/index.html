@@ -10,40 +10,83 @@
   <script src="/app.js" defer></script>
 </head>
 <body>
-  <aside class="sidebar">
-    <a class="brand" href="/" aria-label="Battery Detective home">
-      <svg width="30" height="34" viewBox="0 0 30 34" fill="none" aria-hidden="true"><rect x="3" y="4" width="19" height="25" rx="4" stroke="currentColor" stroke-width="2"/><path d="M9 1h7M8 11h8M8 16h6" stroke="currentColor" stroke-width="2"/><circle cx="21" cy="24" r="6" fill="white" stroke="currentColor" stroke-width="2"/><path d="m25 29 4 4" stroke="currentColor" stroke-width="2"/></svg>
-      <span>Battery<br>Detective</span>
-    </a>
-    <nav aria-label="Main"><a class="active" href="#timeline">Timeline</a><a href="#investigation">Investigation</a><a href="#measurement-guide">Measurement guide</a></nav>
-    <div class="sidebar-bottom"><div class="local-indicator">Stored on this Mac</div><p>No accounts. No uploads.</p><details><summary>Data location</summary><code id="database-path"></code></details><span class="version">Version 0.1</span></div>
-  </aside>
-  <main>
-    <header class="page-header"><div><p id="date-label" class="date-label">Local battery history</p><h1>Battery timeline</h1></div><div class="header-actions"><span id="collector-state" class="status">Reading history</span><button id="refresh" type="button">Refresh</button></div></header>
-    <div id="error" class="notice error" role="alert" hidden></div>
-    <div id="demo-notice" class="notice" hidden><strong>Synthetic demonstration</strong><span>These measurements illustrate a build workload, a sampling gap, and charging. They are not activity from this Mac.</span></div>
-    <section id="timeline" aria-label="Battery and system activity">
-      <div class="toolbar"><div class="presets" role="group" aria-label="History window"><button data-preset="1" type="button">Last hour</button><button data-preset="6" class="selected" type="button" aria-pressed="true">Last 6 hours</button><button data-preset="today" type="button">Today</button><button data-preset="custom" type="button">Custom</button></div><span id="window-label" class="quiet"></span></div>
-      <form id="custom-range" class="range-form" hidden><label>Window start<input id="window-start" type="datetime-local" required></label><label>Window end<input id="window-end" type="datetime-local" required></label><button type="submit">Show window</button></form>
-      <div class="readings"><div><span>Latest in window</span><strong id="battery-reading">—</strong><small id="power-reading">No reading</small></div><div><span>Estimated discharge</span><strong id="rate-reading">—</strong><small>percentage points / hour</small></div><div><span>Mean system CPU</span><strong id="cpu-reading">—</strong><small>of total CPU capacity</small></div><div><span>Continuous coverage</span><strong id="coverage-reading">—</strong><small id="sample-reading">No samples</small></div></div>
-      <div id="empty-state" class="empty" hidden><h2>No measurements in this window</h2><p id="empty-copy">Start the collector in a terminal, then refresh. Leave it running to build a history.</p><code id="collect-command">python -m battery_detective collect</code><button id="latest-window" type="button" hidden>Show latest recorded window</button></div>
-      <div id="chart-panel" class="chart-panel">
-        <div class="chart-heading"><span>Battery level</span><div class="legend"><span><i class="line-key"></i>Battery</span><span><i class="charge-key"></i>External power</span><span><i class="anomaly-key"></i>Fast drain</span><span><i class="gap-key"></i>Missing data</span></div></div>
-        <svg id="timeline-chart" viewBox="0 0 1000 360" role="img" aria-label="Battery percentage, system CPU, and sampled foreground apps over time"><title>Battery and CPU timeline</title></svg>
-        <div class="chart-foot"><span>Drag across the plot to investigate an interval.</span><span id="chart-timezone"></span></div>
+  <a class="skip-link" href="#main">Skip to battery history</a>
+  <header class="app-bar">
+    <div class="app-bar-inner">
+      <a class="brand" href="/" aria-label="Battery Detective home">
+        <svg width="30" height="24" viewBox="0 0 30 24" fill="none" aria-hidden="true"><rect x="1.5" y="4" width="23" height="16" rx="4" stroke="currentColor" stroke-width="1.7"/><path d="M27 9v6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect x="5" y="7.5" width="12" height="9" rx="1.5" fill="currentColor"/></svg>
+        <span>Battery Detective</span>
+      </a>
+      <nav aria-label="Main navigation"><a href="#timeline" aria-current="page">Overview</a><button type="button" data-help="intro">What we measure</button></nav>
+    </div>
+  </header>
+  <main id="main">
+    <header class="page-header">
+      <div class="page-title"><h1>Battery overview</h1><p id="date-label" class="date-label">Your Mac's battery history</p></div>
+      <div class="header-actions">
+        <span id="collector-state" class="status" role="status">Reading history</span>
+        <button id="refresh" class="secondary icon-button" type="button"><svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M16 7a6.5 6.5 0 1 0 .2 5M16 2v5h-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="refresh-label">Refresh</span></button>
       </div>
-      <div class="detector-row"><div id="anomaly-list" aria-label="Detected drain periods"></div><label class="threshold-label">Fast drain threshold<input id="threshold" type="number" min="1" max="100" step="1" value="12"><span>pp/h · 15 min</span></label></div>
+    </header>
+    <div id="error" class="notice error" role="alert" hidden></div>
+    <div id="demo-notice" class="notice demo" hidden><strong>Demo data</strong><span>An example of battery drain, a recording gap, and charging. These readings are not from your Mac.</span></div>
+    <section id="timeline" aria-label="Battery and computer activity">
+      <div class="toolbar">
+        <div class="presets" role="group" aria-label="History window">
+          <button data-preset="1" type="button" aria-pressed="false">Last hour</button><button data-preset="6" class="selected" type="button" aria-pressed="true">Last 6 hours</button><button data-preset="today" type="button" aria-pressed="false">Today</button><button data-preset="custom" type="button" aria-pressed="false">Custom</button>
+        </div>
+        <span id="window-label" class="quiet"></span>
+        <form id="custom-range" class="range-form custom-range" hidden><label>Window start<input id="window-start" type="datetime-local" required></label><label>Window end<input id="window-end" type="datetime-local" required></label><button type="submit" class="primary">Apply</button></form>
+      </div>
+      <div class="overview-surface">
+        <div class="readings">
+          <div class="battery-metric"><div class="metric-label">Battery level <button class="help-button" data-help="battery" type="button" aria-label="About battery level">?</button></div><strong id="battery-reading">…</strong><small id="power-reading">Latest reading in this window</small></div>
+          <div><div class="metric-label">Battery used / hour <button class="help-button" data-help="drain" type="button" aria-label="About battery drain">?</button></div><strong id="rate-reading">…</strong><small id="rate-caption">Percentage points, while unplugged</small></div>
+          <div><div class="metric-label">Processor use <button class="help-button" data-help="cpu" type="button" aria-label="About processor use">?</button></div><strong id="cpu-reading">…</strong><small id="cpu-caption">Average across your Mac</small></div>
+          <div><div class="metric-label">Time recorded <button class="help-button" data-help="coverage" type="button" aria-label="About recording coverage">?</button></div><strong id="coverage-reading">…</strong><small id="sample-reading">Checking for readings</small></div>
+        </div>
+        <div id="empty-state" class="empty" hidden>
+          <svg width="48" height="42" viewBox="0 0 48 42" fill="none" aria-hidden="true"><rect x="2" y="7" width="38" height="28" rx="7" stroke="currentColor" stroke-width="2"/><path d="M45 17v8M13 21h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <h2>Your battery history starts here.</h2><p id="empty-copy">Start the collector in a terminal, then refresh this page. Opening the dashboard alone does not start recording.</p><code id="collect-command">python -m battery_detective collect</code><button id="latest-window" type="button" class="secondary" hidden>Show latest recorded window</button>
+        </div>
+        <div id="chart-panel" class="chart-panel">
+          <div class="chart-heading"><h2>Battery history</h2><div class="legend"><span><i class="line-key"></i>Battery</span><span><i class="charge-key"></i>Plugged in</span><span><i class="anomaly-key"></i>Fast drain</span><span><i class="gap-key"></i>No readings</span></div></div>
+          <svg id="timeline-chart" viewBox="0 0 1000 360" role="img" aria-label="Battery level, processor use, and apps seen in front over time"><title>Battery and computer activity</title></svg>
+          <div class="chart-foot"><span>Drag to select a period, or use the time fields below.</span><span id="chart-timezone"></span></div>
+        </div>
+      </div>
+      <div class="detector-row"><div id="anomaly-list" aria-label="Detected fast-drain periods"></div><details class="detection-settings"><summary>Detection settings</summary><div><label class="threshold-label" for="threshold">Flag battery use above</label><div class="threshold-input"><input id="threshold" type="number" min="1" max="100" step="1" value="12" aria-describedby="threshold-description"><span>points / hour</span></div><p id="threshold-description">Over at least 15 minutes. This is a screening threshold, not a diagnosis.</p></div></details></div>
     </section>
     <section id="investigation" class="investigation" aria-labelledby="investigation-title">
-      <div class="section-title"><h2 id="investigation-title">Investigate a window</h2><button id="download-report" type="button" disabled>Save report</button></div>
-      <form id="investigate-form" class="range-form"><label>From<input id="selection-start" type="datetime-local" required></label><label>To<input id="selection-end" type="datetime-local" required></label><button class="primary" type="submit">Investigate</button><span id="selection-label" class="quiet" aria-live="polite"></span></form>
+      <div class="section-title"><div><h2 id="investigation-title">A closer look</h2><p>What was happening during the selected period.</p></div><button id="download-report" type="button" class="secondary icon-button" disabled><svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2v10m-4-4 4 4 4-4M3 13v4h14v-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Save report</button></div>
+      <form id="investigate-form" class="range-form selection-form"><label>From<input id="selection-start" type="datetime-local" required></label><label>To<input id="selection-end" type="datetime-local" required></label><button class="primary" type="submit">Investigate</button><span id="selection-label" class="quiet" aria-live="polite"></span></form>
       <div class="investigation-grid">
-        <section class="activity-section" aria-labelledby="activity-title"><div class="subsection-title"><h3 id="activity-title">Recorded process activity</h3><span>CPU time, not battery share</span></div><div class="table-scroll"><table><thead><tr><th scope="col">Process</th><th scope="col">CPU time</th><th scope="col">Mean CPU</th><th scope="col">Peak memory</th></tr></thead><tbody id="process-table"><tr><td colspan="4">Choose a recorded window to investigate.</td></tr></tbody></table></div><p class="table-note">Process CPU uses one core as 100%. Multi-core work can exceed 100%.</p><h3 class="foreground-heading">Foreground observations</h3><div id="foreground-list" class="foreground-list"></div></section>
-        <section class="evidence-section" aria-live="polite"><div class="subsection-title"><h3>Investigation notes</h3><span>Computed locally</span></div><div id="evidence"><p class="quiet">Select an interval to see the measurements and potential explanations.</p></div></section>
+        <section class="evidence-section surface" aria-labelledby="findings-title"><div class="subsection-title"><h3 id="findings-title">What the readings suggest</h3></div><div id="evidence" aria-live="polite"><p class="quiet">Select a recorded period to see what happened.</p></div></section>
+        <section class="activity-section surface" aria-labelledby="activity-title">
+          <div class="subsection-title"><h3 id="activity-title">Apps &amp; background work</h3><button class="help-button" type="button" data-help="process" aria-label="About processes">?</button></div>
+          <p class="section-description">The busiest recorded processes in this period, including time plugged in. CPU work is not battery share.</p>
+          <div class="table-scroll"><table><thead><tr><th scope="col">Process</th><th scope="col">CPU time</th><th scope="col">CPU use</th><th scope="col"><button type="button" class="inline-button" data-help="memory" aria-label="About memory">Memory</button></th></tr></thead><tbody id="process-table"><tr><td colspan="4">Choose a recorded period.</td></tr></tbody></table></div>
+          <button id="show-processes" type="button" class="text-button" hidden>Show all processes</button>
+          <p class="table-note">CPU is your processor. 100% here means one busy core; several cores can exceed 100%. <button class="inline-button" type="button" data-help="cpu">Explain these numbers</button></p>
+          <div class="foreground-heading"><h4>Apps seen in front</h4><button class="help-button" type="button" data-help="foreground" aria-label="About apps seen in front">?</button></div><div id="foreground-list" class="foreground-list"></div>
+        </section>
       </div>
     </section>
-    <details id="measurement-guide" class="measurement-guide"><summary>What these measurements can tell you</summary><div><p>Battery percentages are rounded. A discharge estimate needs at least 10 uninterrupted minutes and a drop of 2 percentage points. Fast drain uses 15-minute windows at your selected threshold.</p><p>Charging, missing observations, sleep or clock changes, battery increases, and collector restarts break the discharge timeline. The plot leaves these breaks visible.</p><p>CPU time is evidence of work, not a measurement of per-app energy. Display brightness, GPU work, networking, and temperature can also affect battery use. A foreground app is a sampled observation, not a continuous activity log.</p><p>The comparison window is the preceding period of equal length. It may contain a different workload. Reports are deterministic and stay on this Mac.</p></div></details>
-    <footer><span>Battery Detective</span><span>Measurements first. Explanations with evidence.</span></footer>
+    <footer><span class="privacy-note"><svg width="13" height="15" viewBox="0 0 16 18" fill="none" aria-hidden="true"><rect x="2" y="7" width="12" height="9" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M4.5 7V5a3.5 3.5 0 0 1 7 0v2" stroke="currentColor" stroke-width="1.4"/></svg><span id="storage-description">Stored on this Mac. No uploads.</span></span><details class="data-location"><summary>Data location</summary><code id="database-path"></code></details></footer>
   </main>
+  <dialog id="measurement-dialog" aria-labelledby="guide-title">
+    <div class="dialog-header"><div><p class="dialog-eyebrow">Measurement guide</p><h2 id="guide-title">Understand the readings</h2></div><button id="close-guide" type="button" class="close-button" aria-label="Close measurement guide">×</button></div>
+    <div class="guide-content">
+      <section id="guide-intro" tabindex="-1" class="guide-intro"><h3>How recording works</h3><p>The collector asks macOS for battery and activity readings every 60 seconds by default. It saves them in a SQLite database, a file on your Mac, so you can look back later.</p><p>It reads numbers and app names. It does not record your screen, keystrokes, browser history, or document contents.</p></section>
+      <section id="guide-battery" tabindex="-1"><h3>Battery level</h3><p>The charge remaining, as a percentage reported by macOS. “Plugged in” means a power adapter is connected; it does not always mean the battery is charging.</p><p class="source"><strong>Read with</strong> <code>psutil.sensors_battery()</code>, a Python tool for reading operating-system measurements.</p></section>
+      <section id="guide-drain" tabindex="-1"><h3>Battery used per hour</h3><p>A percentage point is a change from, for example, 80% to 79%. Losing 6 points in 30 minutes averages 12 points per hour.</p><p>We calculate this from battery readings and elapsed time while unplugged. We need at least 10 continuous minutes and a 2-point drop. Charging and recording gaps break the calculation. Rounded battery readings make this an estimate.</p><p class="source"><strong>Calculated with</strong> local Python analysis. This is a rate of battery change, not a measurement of an individual app's power.</p></section>
+      <section id="guide-cpu" tabindex="-1"><h3>Processor use, or CPU</h3><p>The CPU is the part of your Mac that executes instructions. A core is one unit of that processor. System CPU use describes how busy all your cores were together.</p><p>For each process, we compare cumulative processor time between readings. Using 30 seconds of processor time in a 60-second interval means 50% CPU. Several cores working at once can put a process above 100%, or give it more CPU minutes than minutes on the clock.</p><p>Busy processors are a clue to battery use. CPU percentage is not battery percentage, and it does not measure graphics or display power.</p><p class="source"><strong>Read with</strong> <code>psutil</code>, using macOS system and process CPU counters. The first reading establishes a starting point; the next reading lets us calculate activity.</p></section>
+      <section id="guide-process" tabindex="-1"><h3>Processes and background work</h3><p>A process is a running program: an app, a helper, or a system task. One app can have several processes. PID means process ID, the number macOS assigns it.</p><p>We pair that ID with its start time so a new process cannot inherit an older one's history. Protected processes are skipped. Work that starts and ends between readings may be missed.</p><p class="source"><strong>Read with</strong> <code>psutil.Process</code>. App names are attached only when macOS supplies an identity; we do not guess which app or browser tab owns a helper.</p></section>
+      <section id="guide-memory" tabindex="-1"><h3>Memory, or RAM</h3><p>RAM is the working space programs use while they run. The table shows the highest memory use among each process's included activity readings, in megabytes (MB, one million bytes). First readings and incomplete intervals may be excluded. This is different from disk storage.</p><p>Using a lot of memory alone does not prove that a process is draining the battery.</p><p class="source"><strong>Read with</strong> <code>psutil.virtual_memory()</code> for the system and <code>Process.memory_info()</code> for processes.</p></section>
+      <section id="guide-foreground" tabindex="-1"><h3>Apps seen in front</h3><p>The foreground app is the app macOS identifies as active at the moment of a reading. The counts show how often we saw it, not exactly how long you used it. Other apps may still be working in the background.</p><p class="source"><strong>Read with</strong> macOS <code>NSWorkspace.frontmostApplication</code> through PyObjC, which lets Python use Mac APIs.</p></section>
+      <section id="guide-coverage" tabindex="-1"><h3>Readings and recording gaps</h3><p>A sample is one reading. “Time recorded” is the share of your selected window with continuous observations. Sleep, a stopped collector, and missed readings leave gaps.</p><p>A baseline is a comparison period. Here we use the preceding period of the same length. It may contain different work, so a comparison is useful context, not a controlled experiment.</p><p class="source"><strong>Checked with</strong> date-and-time readings and a monotonic clock, which tracks elapsed time, along with the recording interval and session boundaries.</p></section>
+      <section id="guide-sensors" tabindex="-1"><h3>Additional sensors and limits</h3><p>When available, we also save battery voltage, electrical current, charging state, and cycle count using macOS <code>ioreg</code> and <code>AppleSmartBattery</code>. These are battery-wide readings, not calibrated per-app energy measurements. Cycle count alone is not a battery-health diagnosis.</p><p>Disk read/write counters are optional and can be unavailable on macOS. We do not directly measure network traffic, display brightness, GPU activity, or temperature. Missing readings remain unknown.</p><p>Reports use local calculations, not an AI model. Possible contributors are ranked by observed CPU work during valid unplugged periods. Correlation means two things happened together; it does not prove that one caused the other.</p></section>
+    </div>
+  </dialog>
 </body>
 </html>

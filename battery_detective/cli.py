@@ -42,12 +42,16 @@ def build_parser():
     report.add_argument("--start", required=True, help="ISO timestamp including timezone")
     report.add_argument("--end", required=True, help="ISO timestamp including timezone")
     report.add_argument("--threshold", type=float, default=12)
+    share = commands.add_parser("share", help="Export a recorded interval into a new directory for hosting")
+    share.add_argument("--start", required=True, help="ISO timestamp including timezone")
+    share.add_argument("--end", required=True, help="ISO timestamp including timezone")
+    share.add_argument("--output", required=True, type=Path, help="New deployment directory; includes real app names and timestamps")
     prune = commands.add_parser("prune", help="Delete samples older than the specified retention")
     prune.add_argument("--days", type=integer_between(1, 365), default=7)
     agent = commands.add_parser("agent", help="Opt-in user LaunchAgent management")
     agent.add_argument("action", choices=["install", "start", "stop", "status", "uninstall"])
     agent.add_argument("--dry-run", action="store_true", help="Print the install plist without writing or loading it")
-    for command in (collect, dashboard, demo, report, prune, agent):
+    for command in (collect, dashboard, demo, report, share, prune, agent):
         command.add_argument("--db", type=Path, default=default_database(), help="SQLite file path")
     # A demo never defaults to the live history path.
     demo.set_defaults(db=Path("demo.sqlite"))
@@ -70,6 +74,12 @@ def main(argv=None):
         elif args.command == "agent":
             from .agent import manage_agent
             manage_agent(args.action, args.db, args.dry_run)
+        elif args.command == "share":
+            from .sharing import export_recording
+            output = export_recording(args.db, args.output, parse_time(args.start), parse_time(args.end))
+            print(f"Recorded session exported to: {output}")
+            print("Includes app/process names and timestamps in this interval. Review before publishing.")
+            print("The original recorder is unaffected. Nothing has been uploaded by this command.")
         elif args.command == "report":
             from .analysis.investigation import investigate
             from .reports.generator import render_report
